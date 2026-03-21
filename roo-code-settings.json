@@ -1,0 +1,9 @@
+{
+  "source": "rooveterinaryinc.roo-cline",
+  "exportedAt": "2026-03-21T20:49:05.254349Z",
+  "files": {
+    "mcp_settings.json": "{\n  \"mcpServers\": {\n\n  }\n}",
+    "custom_modes.yaml": "customModes: []\n"
+  },
+  "vscodeRooSettings": {}
+}
