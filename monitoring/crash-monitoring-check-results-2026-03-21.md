@@ -54,3 +54,47 @@ There is mild-to-moderate memory pressure and persistent graphics-driver warning
    - previous-boot journal window immediately before freeze time
    to capture the next precursor event.
 
+## Incident follow-up: VS Code lockup + return to login screen (conversation log)
+
+### User-reported symptom
+
+- VS Code became unresponsive and was about to show a force-shutdown message.
+- Before that dialog fully completed, Kali returned to the login screen and the desktop session restarted.
+
+### Investigation steps performed
+
+1. Reviewed login/session history with `last -x` to confirm session transitions.
+2. Inspected previous-boot journal errors and the end-of-boot timeline.
+3. Inspected current-boot logs around the incident window (`14:53:30` to `14:55:30`).
+4. Searched specifically for OOM/panic/segfault/watchdog/GPU reset indicators.
+5. Checked Xorg logs (`/var/log/Xorg.0.log` and `.old`) for display-stack errors.
+
+### Key evidence captured
+
+- `lightdm` closed the active user session around `14:54:31`.
+- `systemd-logind` recorded logout immediately after (`Session 3 logged out`).
+- VirtualBox guest graphics components logged multiple fatal X-window-related errors:
+  - `VBoxClient VMSVGA: Error: A fatal guest X Window error occurred`
+  - related SHCLX11 / seamless / drag-and-drop IPC broken-pipe messages
+- XFCE user services failed right after X teardown:
+  - `xfce4-notifyd.service: Failed with result 'exit-code'`
+  - `xdg-desktop-portal-gtk.service: Failed with result 'exit-code'`
+- `lightdm` then created a greeter and a new user X11 session around `14:55:15`.
+
+### Negative findings (what was *not* seen)
+
+- No kernel panic in the incident window.
+- No OOM-killer event in the incident window.
+- No watchdog-triggered reboot/reset signature.
+- No evidence of full OS reboot at that exact event; behavior matches X/desktop session reset.
+
+### Likely root cause
+
+The event is most consistent with a **GUI/X session crash-reset caused by virtual graphics stack instability** (VirtualBox VMSVGA/X11 path), rather than a VS Code-only failure or full-kernel crash.
+
+### Practical mitigations recorded
+
+1. Ensure VirtualBox Guest Additions and host VirtualBox versions are matched.
+2. Test VM display settings for stability (graphics controller mode and 3D acceleration on/off).
+3. Increase VM video memory and provide slightly more RAM/CPU headroom if currently constrained.
+4. Keep autosave and versioned backups enabled to reduce disruption from session resets.
