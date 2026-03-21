@@ -98,3 +98,44 @@ The event is most consistent with a **GUI/X session crash-reset caused by virtua
 2. Test VM display settings for stability (graphics controller mode and 3D acceleration on/off).
 3. Increase VM video memory and provide slightly more RAM/CPU headroom if currently constrained.
 4. Keep autosave and versioned backups enabled to reduce disruption from session resets.
+
+## Incident follow-up: Repeat crash/reset at ~18:58 with reported 100% CPU in VS Code
+
+### User-reported symptom
+
+- VS Code showed 100% CPU usage and then crashed again.
+- Kali exited back to the login screen.
+- VM itself did not reboot (guest stayed running; user did not restart VM).
+
+### Evidence captured immediately after report
+
+- Session timeline (`last -x`) shows desktop session turnover at `18:58`:
+  - previous user session ended at `18:58`
+  - new `lightdm`/user login session started at `18:58`
+- Current-boot error window includes the same VirtualBox/X11 fatal sequence:
+  - `VBoxClient VMSVGA: Error: A fatal guest X Window error occurred`
+  - related `seamless x11`, `SHCLX11`, and `dndX11` fatal X Window errors
+  - immediate XFCE service failures (`xfce4-notifyd`, `xdg-desktop-portal-gtk`) during teardown/restart
+- `lightdm` and `systemd-logind` then recreated greeter/user sessions, matching an X session reset pattern rather than a full OS reboot.
+
+### Negative findings for this event window
+
+- No kernel panic signature captured.
+- No OOM-killer signature captured.
+- No watchdog-reset/reboot signature captured.
+
+### Interpretation update
+
+This second incident is consistent with the same root pattern already observed earlier today: **desktop/X session crash-reset on the VirtualBox graphics path (VMSVGA/X11)**. The user-visible high VS Code CPU likely reflects a trigger or co-factor under load, but logs still point to display-session collapse rather than a kernel crash.
+
+### Priority next mitigation
+
+1. Treat VirtualBox display path as primary fault domain:
+   - test with 3D acceleration **disabled** first,
+   - keep controller on VMSVGA unless a controlled A/B test is performed,
+   - maximize video memory allowed by current VM profile.
+2. Keep Guest Additions and host VirtualBox versions strictly aligned.
+3. If another reset occurs, immediately capture:
+   - `journalctl -b --since '-10 min' --no-pager > ~/Desktop/incident-journal.txt`
+   - `last -x | head -n 30 > ~/Desktop/incident-lastx.txt`
+   to preserve a tight pre/post crash window.
