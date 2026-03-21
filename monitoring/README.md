@@ -79,3 +79,7 @@ If logs indicate sustained CPU starvation or memory pressure, likely fixes are:
 - Keep guest additions and VirtualBox version current.
 - Disable unnecessary desktop effects/background services in the guest.
 
+## 6) Incident reports in this project
+
+- Crash monitoring check results (2026-03-21):
+  - `monitoring/crash-monitoring-check-results-2026-03-21.md`
